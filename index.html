@@ -674,6 +674,14 @@
         </sc-if>
         <sc-if value="{{ isLoggedIn }}" hint-placeholder-val="{{ false }}">
           <button onClick="{{ setDash }}" style="{{ dashTabStyle }}" style-hover="color:#00457c;">{{ dashTabLabel }}</button>
+          <sc-if value="{{ canReviewMgr }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ openMgrQueue }}" style="display:inline-flex;align-items:center;gap:7px;font-family:'Public Sans',sans-serif;font-weight:600;font-size:14.5px;padding:6px 0;border:none;background:transparent;cursor:pointer;color:#3d4b57;white-space:nowrap;" style-hover="color:#00457c;">Manager requests
+              <sc-if value="{{ hasMgrPending }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#f0b323;color:#33260a;font-family:'Archivo',sans-serif;font-weight:800;font-size:11px;">{{ mgrPendingCount }}</span></sc-if>
+            </button>
+          </sc-if>
+          <sc-if value="{{ canRequestMgr }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ openMgrReq }}" style="font-family:'Public Sans',sans-serif;font-weight:600;font-size:14.5px;padding:6px 0;border:none;background:transparent;cursor:pointer;color:#3d4b57;white-space:nowrap;" style-hover="color:#00457c;">Manage a club?</button>
+          </sc-if>
           <div class="m-header-user" style="display:flex;align-items:center;gap:11px;">
             <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#00457c;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;flex-shrink:0;">{{ userInitial }}</span>
             <span style="font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;color:#1a2c39;white-space:nowrap;">{{ userFirstName }}</span>
@@ -1764,10 +1772,47 @@
         </div>
         </sc-if>
 
-        <!-- The role is not chosen here. The database assigns it: every new
-             account starts as a student, and an administrator promotes people
-             from the admin dashboard. Which dashboard you land on is read back
-             from your profile after sign-in. -->
+        <!-- The account role is still not chosen here: every new account starts
+             as a student. "I am a club manager" only files a request that an
+             admin (or the club's advisor) has to approve; until then the
+             account is a plain student account. -->
+        <sc-if value="{{ authIsSignup }}" hint-placeholder-val="{{ false }}">
+          <label style="display:block;margin:0 0 8px;font-family:'Archivo',sans-serif;font-weight:600;font-size:14px;color:#1a2c39;">I am a&hellip;</label>
+          <div style="display:flex;gap:10px;margin-bottom:16px;">
+            <button type="button" onClick="{{ pickAuthStudent }}" aria-pressed="{{ authAsStudent }}" style="{{ authStudentCardStyle }}">
+              <span style="font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;color:#1a2c39;">Student</span>
+              <span style="font-size:12.5px;line-height:1.4;color:#5a6570;">Find and join clubs</span>
+            </button>
+            <button type="button" onClick="{{ pickAuthManager }}" aria-pressed="{{ authAsManager }}" style="{{ authManagerCardStyle }}">
+              <span style="font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;color:#1a2c39;">Club manager</span>
+              <span style="font-size:12.5px;line-height:1.4;color:#5a6570;">Run a club&rsquo;s page</span>
+            </button>
+          </div>
+          <sc-if value="{{ authAsManager }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:0 0 18px;padding:15px 15px 14px;border-radius:12px;background:#f6f9fc;border:1px solid #dbe6f0;animation:dc-fade-in .25s ease;">
+              <label style="display:block;margin:0 0 7px;font-family:'Archivo',sans-serif;font-weight:600;font-size:14px;color:#1a2c39;">Which club do you manage?</label>
+              <input class="m-auth-input" value="{{ authMgrQuery }}" onInput="{{ onAuthMgrQuery }}" onKeyDown="{{ onAuthKey }}" autocomplete="off" placeholder="Start typing the club&rsquo;s name" style="width:100%;padding:12px 14px;border:1.5px solid #d6dde3;border-radius:10px;font-size:15px;font-family:'Public Sans',sans-serif;outline:none;box-sizing:border-box;background:#fff;" style-focus="border-color:#00457c;box-shadow:0 0 0 3px rgba(0,69,124,0.14);">
+              <sc-if value="{{ hasAuthMgrMatches }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:6px;border:1px solid #d6dde3;border-radius:10px;background:#fff;overflow:hidden;">
+                  <sc-for list="{{ authMgrMatches }}" as="m" hint-placeholder-count="3">
+                    <button type="button" onClick="{{ m.pick }}" style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;width:100%;text-align:left;padding:10px 14px;border:none;border-bottom:1px solid #eef2f5;background:#fff;cursor:pointer;font-family:'Public Sans',sans-serif;font-size:14.5px;color:#1a2c39;" style-hover="background:#f1f7fd;">
+                      <span style="font-weight:600;">{{ m.name }}</span><span style="font-size:12.5px;color:#8a97a1;">{{ m.cat }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ authMgrPicked }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:8px 0 0;font-size:13px;color:#1f6b34;font-weight:600;">&#10003; Found it in the directory.</p>
+              </sc-if>
+              <sc-if value="{{ authMgrUnlisted }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:#5c4a1a;">Not in our directory yet? That&rsquo;s fine &mdash; we&rsquo;ll pass the name on to the admins.</p>
+              </sc-if>
+              <label style="display:block;margin:14px 0 7px;font-family:'Archivo',sans-serif;font-weight:600;font-size:14px;color:#1a2c39;">Your role in it <span style="font-weight:400;color:#8a97a1;">(optional)</span></label>
+              <input class="m-auth-input" value="{{ authMgrMessage }}" onInput="{{ onAuthMgrMessage }}" onKeyDown="{{ onAuthKey }}" maxlength="300" placeholder="e.g. President, or the club&rsquo;s advisor" style="width:100%;padding:12px 14px;border:1.5px solid #d6dde3;border-radius:10px;font-size:15px;font-family:'Public Sans',sans-serif;outline:none;box-sizing:border-box;background:#fff;" style-focus="border-color:#00457c;box-shadow:0 0 0 3px rgba(0,69,124,0.14);">
+              <p style="margin:10px 0 0;font-size:12.5px;line-height:1.5;color:#6b7782;">An admin approves this before you get any access to the club. Until then you&rsquo;ll have a normal student account.</p>
+            </div>
+          </sc-if>
+        </sc-if>
 
         <!-- Full name: sign-up only -->
         <sc-if value="{{ authIsSignup }}" hint-placeholder-val="{{ false }}">
@@ -4048,6 +4093,153 @@
             </div>
           </sc-if>
 
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ CLUB-MANAGER REQUESTS ============ -->
+  <!-- After sign-up as a club manager. Sits above the "check your email"
+       panel: the request is already filed, and this says so plainly. -->
+  <sc-if value="{{ showMgrWelcome }}" hint-placeholder-val="{{ false }}">
+    <div class="m-modal-overlay" onClick="{{ closeMgrWelcome }}" style="position:fixed;inset:0;background:rgba(8,18,30,0.42);-webkit-backdrop-filter:blur(18px) saturate(120%);backdrop-filter:blur(18px) saturate(120%);display:flex;align-items:center;justify-content:center;padding:24px;z-index:1300;animation:dc-scrim-in 260ms var(--spring);">
+      <div role="dialog" aria-modal="true" aria-labelledby="mgr-welcome-title" class="m-modal" onClick="{{ stopPropagation }}" style="background:#fff;border-radius:18px;max-width:460px;width:100%;box-shadow:0 24px 64px rgba(0,20,50,0.35);animation:dc-materialise 420ms var(--spring);">
+        <div style="padding:34px 30px 28px;text-align:center;">
+          <div style="width:62px;height:62px;margin:0 auto 18px;border-radius:50%;background:#e4f7ec;display:flex;align-items:center;justify-content:center;font-size:30px;color:#0a7a3d;">&#10003;</div>
+          <h2 id="mgr-welcome-title" style="margin:0 0 10px;font-family:'Archivo',sans-serif;font-weight:800;font-size:24px;color:#1a2c39;">Your account is created</h2>
+          <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#4a5862;">Your request to manage <strong>{{ mgrWelcomeClub }}</strong> was sent. It will be processed soon.</p>
+          <p style="margin:0 0 22px;font-size:14px;line-height:1.6;color:#5a6570;">An admin will review it, and you&rsquo;ll get a notification here once it&rsquo;s decided. In the meantime you can use TrojanMatch as a student.</p>
+          <button onClick="{{ closeMgrWelcome }}" style="font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;padding:13px 32px;border-radius:999px;border:none;cursor:pointer;background:#00457c;color:#fff;box-shadow:0 8px 20px rgba(0,55,110,0.3);">Got it</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Signed-in: ask to manage a club. -->
+  <sc-if value="{{ showMgrReq }}" hint-placeholder-val="{{ false }}">
+    <div class="m-modal-overlay" onClick="{{ closeMgrReq }}" style="position:fixed;inset:0;background:rgba(8,18,30,0.42);-webkit-backdrop-filter:blur(18px) saturate(120%);backdrop-filter:blur(18px) saturate(120%);display:flex;align-items:center;justify-content:center;padding:24px;z-index:1200;animation:dc-scrim-in 260ms var(--spring);">
+      <div role="dialog" aria-modal="true" class="m-modal" onClick="{{ stopPropagation }}" style="background:#fff;border-radius:18px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,20,50,0.35);position:relative;animation:dc-materialise 420ms var(--spring);">
+        <button class="m-modal-close" onClick="{{ closeMgrReq }}" aria-label="Close" style="position:absolute;top:18px;right:18px;width:36px;height:36px;border-radius:5px;border:none;background:#eef2f6;color:#4a5862;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;" style-hover="background:#e0e6eb;">&#10005;</button>
+        <div class="m-modal-body" style="padding:34px 30px 28px;">
+          <sc-if value="{{ mgrReqSent }}" hint-placeholder-val="{{ false }}">
+            <div style="text-align:center;padding:22px 4px 8px;">
+              <div style="width:62px;height:62px;margin:0 auto 18px;border-radius:50%;background:#e4f7ec;display:flex;align-items:center;justify-content:center;font-size:30px;color:#0a7a3d;">&#10003;</div>
+              <h2 style="margin:0 0 8px;font-family:'Archivo',sans-serif;font-weight:800;font-size:24px;color:#1a2c39;">Request sent</h2>
+              <p style="margin:0 0 22px;font-size:15px;line-height:1.6;color:#4a5862;">It will be processed soon. You&rsquo;ll get a notification when an admin or the club&rsquo;s advisor decides.</p>
+              <button onClick="{{ closeMgrReq }}" style="font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;padding:13px 30px;border-radius:999px;border:none;cursor:pointer;background:#00457c;color:#fff;">Done</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{ mgrReqFormOpen }}" hint-placeholder-val="{{ true }}">
+            <h2 style="margin:0 0 6px;padding-right:44px;font-family:'Archivo',sans-serif;font-weight:800;font-size:24px;color:#1a2c39;line-height:1.2;">Request to manage a club</h2>
+            <p style="margin:0 0 20px;font-size:14.5px;line-height:1.55;color:#5a6570;">Officers and advisors can edit a club&rsquo;s page, post announcements, and handle join requests. An admin or the club&rsquo;s advisor approves each request.</p>
+            <label style="display:block;margin:0 0 7px;font-family:'Archivo',sans-serif;font-weight:600;font-size:14.5px;color:#1a2c39;">Which club?</label>
+            <input class="m-search" value="{{ mgrReqQuery }}" onInput="{{ onMgrReqQuery }}" autocomplete="off" placeholder="Start typing the club&rsquo;s name" style="width:100%;padding:12px 14px;border:1.5px solid #d6dde3;border-radius:10px;font-size:15px;font-family:'Public Sans',sans-serif;background:#fff;outline:none;color:#1f2a33;box-sizing:border-box;" style-focus="border-color:#00457c;box-shadow:0 0 0 3px rgba(0,69,124,0.12);">
+            <sc-if value="{{ hasMgrReqMatches }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:6px;border:1px solid #d6dde3;border-radius:10px;background:#fff;overflow:hidden;">
+                <sc-for list="{{ mgrReqMatches }}" as="m" hint-placeholder-count="3">
+                  <button type="button" onClick="{{ m.pick }}" style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;width:100%;text-align:left;padding:10px 14px;border:none;border-bottom:1px solid #eef2f5;background:#fff;cursor:pointer;font-family:'Public Sans',sans-serif;font-size:14.5px;color:#1a2c39;" style-hover="background:#f1f7fd;">
+                    <span style="font-weight:600;">{{ m.name }}</span><span style="font-size:12.5px;color:#8a97a1;">{{ m.cat }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ mgrReqPicked }}" hint-placeholder-val="{{ false }}">
+              <p style="margin:8px 0 0;font-size:13px;color:#1f6b34;font-weight:600;">&#10003; Found it in the directory.</p>
+            </sc-if>
+            <sc-if value="{{ mgrReqUnlisted }}" hint-placeholder-val="{{ false }}">
+              <p style="margin:8px 0 0;font-size:13px;line-height:1.5;color:#5c4a1a;">Not in our directory yet? That&rsquo;s fine &mdash; an admin will get the name you typed.</p>
+            </sc-if>
+            <label style="display:block;margin:18px 0 7px;font-family:'Archivo',sans-serif;font-weight:600;font-size:14.5px;color:#1a2c39;">Anything the reviewer should know? <span style="font-weight:400;color:#8a97a1;">(optional)</span></label>
+            <textarea class="m-textarea" value="{{ mgrReqMessage }}" onInput="{{ onMgrReqMessage }}" maxlength="500" placeholder="e.g. I&rsquo;m the president this year; Ms. Lee is our advisor." style="width:100%;min-height:84px;resize:vertical;padding:12px 14px;border:1.5px solid #d6dde3;border-radius:10px;font-size:14.5px;font-family:'Public Sans',sans-serif;background:#fff;outline:none;color:#1f2a33;line-height:1.5;box-sizing:border-box;" style-focus="border-color:#00457c;box-shadow:0 0 0 3px rgba(0,69,124,0.12);"></textarea>
+            <sc-if value="{{ hasMgrReqError }}" hint-placeholder-val="{{ false }}">
+              <p style="margin:14px 0 0;font-size:13.5px;line-height:1.5;color:#a4442f;font-weight:600;">{{ mgrReqError }}</p>
+            </sc-if>
+            <div style="display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap;">
+              <button onClick="{{ submitMgrReq }}" style="font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;padding:13px 28px;border-radius:14px;border:none;cursor:pointer;background:#00457c;color:#fff;box-shadow:0 8px 20px rgba(0,55,110,0.3);" style-hover="filter:brightness(1.08);">{{ mgrReqSubmitLabel }}</button>
+              <button onClick="{{ closeMgrReq }}" style="background:#fff;border:1px solid #e2e8ee;color:#1a2c39;font-size:14.5px;font-weight:600;cursor:pointer;font-family:'Public Sans',sans-serif;padding:13px 24px;border-radius:14px;" style-hover="border-color:#c6d2dc;">Cancel</button>
+            </div>
+            <sc-if value="{{ hasMgrMine }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:26px;padding-top:20px;border-top:1px solid #eef2f5;">
+                <p style="margin:0 0 10px;font-family:'Archivo',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#9aa6b0;">Your requests</p>
+                <sc-for list="{{ mgrMine }}" as="r" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #f1f4f7;">
+                    <div style="min-width:0;">
+                      <div style="font-weight:700;font-size:14.5px;color:#1a2c39;">{{ r.club }}</div>
+                      <div style="margin-top:2px;font-size:13px;line-height:1.45;color:#6b7782;">{{ r.detail }} &middot; {{ r.when }}</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+                      <span style="display:inline-flex;padding:4px 11px;border-radius:999px;font-family:'Archivo',sans-serif;font-weight:700;font-size:11.5px;background:{{ r.statusBg }};color:{{ r.statusFg }};">{{ r.status }}</span>
+                      <sc-if value="{{ r.canCancel }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ r.cancel }}" style="background:none;border:none;padding:0;cursor:pointer;font-size:12.5px;font-weight:600;color:#a4442f;font-family:'Public Sans',sans-serif;">Withdraw</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- Admins and advisors: decide the requests waiting on them. -->
+  <sc-if value="{{ showMgrQueue }}" hint-placeholder-val="{{ false }}">
+    <div class="m-modal-overlay" onClick="{{ closeMgrQueue }}" style="position:fixed;inset:0;background:rgba(8,18,30,0.42);-webkit-backdrop-filter:blur(18px) saturate(120%);backdrop-filter:blur(18px) saturate(120%);display:flex;align-items:center;justify-content:center;padding:24px;z-index:1200;animation:dc-scrim-in 260ms var(--spring);">
+      <div role="dialog" aria-modal="true" class="m-modal" onClick="{{ stopPropagation }}" style="background:#fff;border-radius:18px;max-width:680px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,20,50,0.35);position:relative;animation:dc-materialise 420ms var(--spring);">
+        <button class="m-modal-close" onClick="{{ closeMgrQueue }}" aria-label="Close" style="position:absolute;top:18px;right:18px;width:36px;height:36px;border-radius:5px;border:none;background:#eef2f6;color:#4a5862;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;" style-hover="background:#e0e6eb;">&#10005;</button>
+        <div class="m-modal-body" style="padding:34px 30px 28px;">
+          <h2 style="margin:0 0 6px;padding-right:44px;font-family:'Archivo',sans-serif;font-weight:800;font-size:24px;color:#1a2c39;line-height:1.2;">Club manager requests</h2>
+          <p style="margin:0 0 20px;font-size:14.5px;line-height:1.55;color:#5a6570;">People asking to run a club. Approving makes them an officer or advisor of it, and they&rsquo;re notified either way.</p>
+          <sc-if value="{{ hasMgrQueueError }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:0 0 16px;padding:11px 14px;border-radius:10px;background:#fbe6e6;font-size:13.5px;line-height:1.5;color:#9b2c2c;font-weight:600;">{{ mgrQueueError }}</p>
+          </sc-if>
+          <sc-if value="{{ mgrQueueEmpty }}" hint-placeholder-val="{{ true }}">
+            <p style="margin:0;padding:18px 2px;font-size:14.5px;color:#8a97a1;">Nothing waiting. New requests show up here and in your notifications.</p>
+          </sc-if>
+          <sc-for list="{{ mgrReview }}" as="r" hint-placeholder-count="2">
+            <div style="border:1px solid #e4e9ee;border-left:4px solid #f0b323;border-radius:10px;padding:18px 20px;margin-bottom:14px;">
+              <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <div style="min-width:0;">
+                  <div style="font-family:'Archivo',sans-serif;font-weight:800;font-size:17px;color:#1a2330;">{{ r.who }}</div>
+                  <div style="margin-top:2px;font-size:13px;color:#8a97a1;word-break:break-all;">{{ r.email }} &middot; {{ r.via }} &middot; {{ r.when }}</div>
+                </div>
+              </div>
+              <p style="margin:12px 0 0;font-size:15px;color:#3d4b57;">Wants to manage <strong>{{ r.club }}</strong></p>
+              <sc-if value="{{ r.hasMessage }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:8px 0 0;padding:10px 12px;border-radius:8px;background:#f6f9fc;font-size:14px;line-height:1.5;color:#3d4b57;">&ldquo;{{ r.message }}&rdquo;</p>
+              </sc-if>
+              <sc-if value="{{ r.unlisted }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top:12px;padding:12px 14px;border-radius:8px;background:#fff8e8;border:1px solid #f0dcae;">
+                  <p style="margin:0 0 8px;font-size:13.5px;line-height:1.5;color:#5c4a1a;">This club isn&rsquo;t in the directory. If it&rsquo;s really one we already list, pick it. Otherwise add the club first, then come back.</p>
+                  <select value="{{ r.linkValue }}" onChange="{{ r.onLink }}" style="width:100%;font-family:'Public Sans',sans-serif;font-size:14.5px;padding:10px 12px;border:1.5px solid #dbe3ea;border-radius:8px;background:#fff;color:#1f2a33;cursor:pointer;">
+                    <sc-for list="{{ r.clubOptions }}" as="o" hint-placeholder-count="5">
+                      <option value="{{ o.id }}">{{ o.name }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+              </sc-if>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px;">
+                <span style="font-size:13px;font-weight:600;color:#5a6570;margin-right:2px;">Give them:</span>
+                <button onClick="{{ r.pickOfficer }}" style="{{ r.officerStyle }}">Officer</button>
+                <button onClick="{{ r.pickAdvisor }}" style="{{ r.advisorStyle }}">Advisor</button>
+              </div>
+              <p style="margin:8px 0 0;font-size:12.5px;line-height:1.5;color:#8a97a1;">Officers edit the page, post, and handle join requests. Advisors can also appoint officers.</p>
+              <input value="{{ r.note }}" onInput="{{ r.onNote }}" maxlength="300" placeholder="Optional note to them (shown if you decline)" style="width:100%;margin-top:12px;padding:10px 12px;border:1.5px solid #dbe3ea;border-radius:8px;font-size:14px;font-family:'Public Sans',sans-serif;box-sizing:border-box;outline:none;" style-focus="border-color:#00457c;">
+              <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+                <button onClick="{{ r.approve }}" style="font-family:'Archivo',sans-serif;font-weight:700;font-size:14.5px;padding:11px 22px;border-radius:10px;border:none;cursor:pointer;background:#1f6b34;color:#fff;" style-hover="filter:brightness(1.1);">{{ r.approveLabel }}</button>
+                <button onClick="{{ r.decline }}" style="font-family:'Archivo',sans-serif;font-weight:700;font-size:14.5px;padding:11px 22px;border-radius:10px;border:1.5px solid #dbe3ea;cursor:pointer;background:#fff;color:#9b2c2c;" style-hover="border-color:#9b2c2c;">Decline</button>
+              </div>
+            </div>
+          </sc-for>
+          <sc-if value="{{ hasMgrRecent }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:22px;padding-top:18px;border-top:1px solid #eef2f5;">
+              <p style="margin:0 0 8px;font-family:'Archivo',sans-serif;font-weight:700;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#9aa6b0;">Recently decided</p>
+              <sc-for list="{{ mgrRecent }}" as="d" hint-placeholder-count="3">
+                <p style="margin:0 0 6px;font-size:13.5px;color:#5a6570;">{{ d.line }}</p>
+              </sc-for>
+            </div>
+          </sc-if>
         </div>
       </div>
     </div>
@@ -6613,7 +6805,9 @@ const TM_AUDIT_LABEL = {
   'membership.insert': 'Added a member',
   'membership.update': 'Changed a member role',
   'membership.delete': 'Removed a member',
-  'club.viewed': 'Viewed a club'
+  'club.viewed': 'Viewed a club',
+  'club_manager.approved': 'Approved a club manager',
+  'club_manager.denied': 'Declined a club manager'
 };
 
 const TMDashData = {
@@ -7099,13 +7293,24 @@ const TMAuth = {
     return location.origin + location.pathname + '?confirmed=1';
   },
 
-  async signUp(email, password, fullName) {
+  async signUp(email, password, fullName, manager) {
     // full_name rides along in user metadata; the handle_new_user trigger
     // copies it into profiles. The role is NOT sent -- the database always
     // starts a new account as 'student', whatever a client claims.
+    //
+    // `manager` ({ clubId, clubName, message }) is the "I am a club manager"
+    // box. It is metadata the trigger turns into a *pending request* an admin
+    // or the club's advisor must approve; it grants nothing by itself.
+    const data = { full_name: fullName };
+    if (manager) {
+      data.signup_intent = 'club_manager';
+      data.manager_club_id = manager.clubId || '';
+      data.manager_club_name = manager.clubName || '';
+      data.manager_message = manager.message || '';
+    }
     const body = await this.authFetch(
       '/auth/v1/signup?redirect_to=' + encodeURIComponent(this.confirmTarget()), {
-        body: { email: email, password: password, data: { full_name: fullName } }
+        body: { email: email, password: password, data: data }
       });
     // With email confirmation on, signup returns a user but no session.
     if (body && body.access_token) this.stamp(body);
@@ -7398,6 +7603,14 @@ class Component extends DCLogic {
     clubContactEmail: '', clubContactPhone: '', clubDescription: '', clubDetailedDescription: '', clubAudience: '',
     clubLocation: '', clubDays: '', clubTime: '', clubInstagram: '', clubWebsite: '', clubPhoto: null, clubNotes: '',
     clubSubmitterName: '', clubSubmitterEmail: '', clubSending: false, clubSent: false, clubError: '',
+    // Club-manager requests. authAsManager / authMgr* belong to the sign-up
+    // form; mgrReq* is the signed-in "request access" modal; mgrQueue is the
+    // list from manager_request_queue() (own requests, plus the ones this
+    // person may decide); mgrDecide* holds per-row choices in the review modal.
+    authAsManager: false, authMgrQuery: '', authMgrClubId: '', authMgrMessage: '',
+    mgrWelcome: null,
+    showMgrReq: false, mgrReqQuery: '', mgrReqClubId: '', mgrReqMessage: '', mgrReqBusy: false, mgrReqError: '', mgrReqSent: false,
+    showMgrQueue: false, mgrQueue: [], mgrQueueBusy: false, mgrDecideRole: {}, mgrDecideLink: {}, mgrDecideNote: {}, mgrDecideBusy: '', mgrQueueError: '',
     copiedLink: false };
 
   // Display order for the categories we already know about. This is an ordering
@@ -7832,6 +8045,7 @@ class Component extends DCLogic {
         // dashboard, signed in, says it better than a line of text would.
         this.setState({ user: account, authPending: '' }, () => {
           this.loadSavedClubs();
+          this.loadManagerQueue();
           if (justConfirmed) this.enterDash(account);
         });
       })
@@ -7891,6 +8105,9 @@ class Component extends DCLogic {
       if (e.key === 'Escape') {
         const s = this.state;
         if (s.showBugForm) { this.setState({ showBugForm: false }); return; }
+        if (s.mgrWelcome) { this.setState({ mgrWelcome: null }); return; }
+        if (s.showMgrReq) { this.setState({ showMgrReq: false }); return; }
+        if (s.showMgrQueue) { this.setState({ showMgrQueue: false }); return; }
         if (s.showClubForm) { this.setState({ showClubForm: false }); return; }
         if (s.showStudentLedInfo || s.showOfficialClubInfo || s.showCurricularInfo) {
           this.setState({ showStudentLedInfo: false, showOfficialClubInfo: false, showCurricularInfo: false });
@@ -8542,6 +8759,135 @@ class Component extends DCLogic {
   // Signing in lands the user straight in the dashboard for their role.
   // `user` is whatever TMAuth.account() read back from the database -- the
   // role here has already been decided server-side.
+  mgrCardStyle(on) {
+    return 'flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:3px;text-align:left;cursor:pointer;'
+      + 'padding:13px 14px;border-radius:12px;font-family:\'Public Sans\',sans-serif;'
+      + 'border:1.5px solid ' + (on ? '#00457c' : '#d6dde3') + ';'
+      + 'background:' + (on ? '#f1f7fd' : '#fff') + ';'
+      + (on ? 'box-shadow:0 0 0 3px rgba(0,69,124,0.12);' : '');
+  }
+
+  mgrChipStyle(on) {
+    return 'padding:8px 14px;border-radius:999px;cursor:pointer;font-family:\'Archivo\',sans-serif;font-weight:700;font-size:13px;'
+      + 'border:1.5px solid ' + (on ? '#00457c' : '#d6dde3') + ';'
+      + 'background:' + (on ? '#00457c' : '#fff') + ';color:' + (on ? '#fff' : '#3d4b57') + ';';
+  }
+
+  // Pending requests this person may decide: everything the queue returned
+  // that is pending and is not their own (RLS already scoped it to admins and
+  // to the advisors of that club).
+  mgrToReview() {
+    const s = this.state;
+    return (s.mgrQueue || []).filter(r => r.status === 'pending' && s.user && r.user_id !== s.user.id);
+  }
+
+  // ---- Club-manager requests ---------------------------------------------
+  // What someone typed into a "which club" box, as the pair the database
+  // wants: a real club id when it is one of ours, otherwise the free text.
+  mgrResolveClub(query, pickedId) {
+    const clubs = this.state.clubs || [];
+    const typed = String(query || '').trim();
+    const picked = pickedId ? clubs.filter(c => c.id === pickedId)[0] : null;
+    if (picked && (!typed || typed.toLowerCase() === String(picked.name).toLowerCase())) {
+      return { clubId: picked.id, clubName: '', label: picked.name };
+    }
+    if (!typed) return null;
+    const exact = clubs.filter(c => String(c.name).toLowerCase() === typed.toLowerCase())[0];
+    if (exact) return { clubId: exact.id, clubName: '', label: exact.name };
+    return { clubId: '', clubName: typed.slice(0, 120), label: typed.slice(0, 120) };
+  }
+
+  mgrMatches(query) {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return [];
+    return (this.state.clubs || [])
+      .filter(c => String(c.name || '').toLowerCase().indexOf(q) !== -1)
+      .slice(0, 6);
+  }
+
+  // Same Apps Script the bug reporter posts to, so it ends up in the same
+  // inboxes. It is a convenience on top of the in-app notification, so it is
+  // fire-and-forget: a failure here must never fail the request itself.
+  sendManagerEmail(info) {
+    if (!BUG_REPORT_URL) return;
+    try {
+      const text = '[CLUB MANAGER REQUEST] ' + (info.who || 'Someone') + ' (' + (info.email || 'no email') + ') '
+        + 'asked to manage "' + info.club + '"' + (info.listed ? '' : ' (not in the directory yet)') + ' via ' + (info.how || 'the site') + '.'
+        + (String(info.message || '').trim() ? '\n\nTheir note: ' + String(info.message).trim() : '')
+        + '\n\nApprove or decline it with the "Manager requests" button in the TrojanMatch header (admins and the club\'s advisor).';
+      fetch(BUG_REPORT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          text: text, email: info.email || '',
+          page: (typeof location !== 'undefined' ? location.href : ''),
+          agent: 'club-manager-request'
+        })
+      }).catch(() => null);
+    } catch (e) { /* the request itself already went through */ }
+  }
+
+  loadManagerQueue() {
+    if (!this.state.user) { this.setState({ mgrQueue: [] }); return Promise.resolve(); }
+    return TMAuth.rpc('manager_request_queue')
+      .then(rows => this.setState({ mgrQueue: Array.isArray(rows) ? rows : [] }))
+      // Older backends do not have the function yet; the feature just stays dark.
+      .catch(() => this.setState({ mgrQueue: [] }));
+  }
+
+  submitManagerRequest() {
+    const s = this.state;
+    if (s.mgrReqBusy) return;
+    const club = this.mgrResolveClub(s.mgrReqQuery, s.mgrReqClubId);
+    if (!club) { this.setState({ mgrReqError: 'Tell us which club you want to manage.' }); return; }
+    this.setState({ mgrReqBusy: true, mgrReqError: '' });
+    TMAuth.rpc('request_club_management', {
+      target_club: club.clubId || null,
+      typed_name: club.clubName || null,
+      note: String(s.mgrReqMessage || '').trim() || null
+    })
+      .then(() => {
+        this.sendManagerEmail({
+          who: s.user && s.user.name, email: s.user && s.user.email, club: club.label,
+          listed: !!club.clubId, message: s.mgrReqMessage, how: 'a signed-in account'
+        });
+        this.setState({ mgrReqBusy: false, mgrReqSent: true, mgrReqQuery: '', mgrReqClubId: '', mgrReqMessage: '' });
+        this.loadManagerQueue();
+      })
+      .catch(err => this.setState({
+        mgrReqBusy: false,
+        mgrReqError: String((err && err.message) || 'That did not go through. Try again in a moment.')
+      }));
+  }
+
+  decideManagerRequest(r, approve) {
+    const s = this.state;
+    if (s.mgrDecideBusy) return;
+    const role = s.mgrDecideRole[r.id] || 'officer';
+    const link = s.mgrDecideLink[r.id] || '';
+    if (approve && !r.club_id && !link) {
+      this.setState({ mgrQueueError: 'Pick which directory club "' + r.club_name + '" is before approving.' });
+      return;
+    }
+    this.setState({ mgrDecideBusy: r.id, mgrQueueError: '' });
+    TMAuth.rpc('decide_manager_request', {
+      request_id: r.id, approve: approve, grant_role: role,
+      link_club: link || null, note: String(s.mgrDecideNote[r.id] || '').trim() || null
+    })
+      .then(() => { this.setState({ mgrDecideBusy: '' }); return this.loadManagerQueue(); })
+      .then(() => { if (this.state.user && this.state.user.role !== 'student') this.loadDashData(); })
+      .catch(err => this.setState({
+        mgrDecideBusy: '',
+        mgrQueueError: String((err && err.message) || 'Could not save that decision.')
+      }));
+  }
+
+  cancelManagerRequest(id) {
+    TMAuth.rpc('cancel_manager_request', { request_id: id })
+      .then(() => this.loadManagerQueue())
+      .catch(() => null);
+  }
+
   enterDash(user) {
     const manage = user.manageClubs || user.advisorClubs || [];
     const advClub = manage[0] || DASH_INIT.advClub;
@@ -8560,7 +8906,7 @@ class Component extends DCLogic {
         advClub: advClub,
         loading: true
       })
-    }, () => { this.loadDashData(); this.loadSavedClubs(); });
+    }, () => { this.loadDashData(); this.loadSavedClubs(); this.loadManagerQueue(); });
     window.scrollTo(0, 0);
   }
 
@@ -8582,6 +8928,12 @@ class Component extends DCLogic {
       this.setState({ authError: 'Pick a password of at least 8 characters.' });
       return;
     }
+    const asManager = isSignup && !!st.authAsManager;
+    const mgrClub = asManager ? this.mgrResolveClub(st.authMgrQuery, st.authMgrClubId) : null;
+    if (asManager && !mgrClub) {
+      this.setState({ authError: 'Tell us which club you manage.' });
+      return;
+    }
     if (isSignup && !TM_IS_LOCAL) {
       const domain = email.split('@')[1] || '';
       if (TM_SIGNUP_DOMAINS.indexOf(domain.toLowerCase()) === -1) {
@@ -8597,7 +8949,23 @@ class Component extends DCLogic {
     this.setState({ authBusy: true, authError: '', authNotice: '' });
     try {
       if (isSignup) {
-        const created = await TMAuth.signUp(email, pw, fullName);
+        const created = await TMAuth.signUp(email, pw, fullName, asManager ? {
+          clubId: mgrClub.clubId,
+          clubName: mgrClub.clubName,
+          message: String(st.authMgrMessage || '').trim()
+        } : null);
+        if (asManager) {
+          // The database filed the request when the account was created. The
+          // email is a best-effort extra on top of the in-app notification.
+          this.sendManagerEmail({
+            who: fullName, email: email, club: mgrClub.label,
+            listed: !!mgrClub.clubId, message: st.authMgrMessage, how: 'sign-up'
+          });
+          this.setState({
+            mgrWelcome: { club: mgrClub.label, email: email },
+            authAsManager: false, authMgrQuery: '', authMgrClubId: '', authMgrMessage: ''
+          });
+        }
         // With email confirmation enabled, signup returns a user but no
         // session -- there is nothing to sign in with yet. Say so as a
         // step, not as an error: nothing has gone wrong.
@@ -9284,7 +9652,7 @@ class Component extends DCLogic {
       toggleAuthMode: () => this.setState(st => ({ authMode: st.authMode === 'signup' ? 'login' : 'signup', authError: '' })),
       logout: () => {
         TMAuth.signOut();
-        this.setState({ user: null, savedClubs: [], view: 'landing', authPassword: '', authError: '', dash: DASH_INIT });
+        this.setState({ user: null, savedClubs: [], mgrQueue: [], showMgrQueue: false, showMgrReq: false, view: 'landing', authPassword: '', authError: '', dash: DASH_INIT });
         window.scrollTo(0, 0);
       },
       // These used to sign a fabricated user straight into the dashboard. With
@@ -9372,6 +9740,122 @@ class Component extends DCLogic {
       onBugEmail: (e) => this.setState({ bugEmail: e.target.value }),
       onBugFile: (e) => { const f = e.target.files && e.target.files[0]; if (f) this.readBugFile(f); },
       onBugSubmit: () => this.submitBugReport(),
+      // ---- Club-manager requests --------------------------------------
+      // Sign-up: the two-way "I am a ..." choice and the box that opens under it.
+      authAsStudent: !s.authAsManager,
+      authAsManager: !!s.authAsManager,
+      pickAuthStudent: () => this.setState({ authAsManager: false, authError: '' }),
+      pickAuthManager: () => this.setState({ authAsManager: true, authError: '' }),
+      authStudentCardStyle: this.mgrCardStyle(!s.authAsManager),
+      authManagerCardStyle: this.mgrCardStyle(!!s.authAsManager),
+      authMgrQuery: s.authMgrQuery,
+      onAuthMgrQuery: (e) => this.setState({ authMgrQuery: e.target.value, authMgrClubId: '', authError: '' }),
+      authMgrMessage: s.authMgrMessage,
+      onAuthMgrMessage: (e) => this.setState({ authMgrMessage: e.target.value }),
+      authMgrMatches: (s.authMgrClubId ? [] : this.mgrMatches(s.authMgrQuery)).map(c => ({
+        name: c.name, cat: c.category || '',
+        pick: () => this.setState({ authMgrQuery: c.name, authMgrClubId: c.id })
+      })),
+      hasAuthMgrMatches: !s.authMgrClubId && this.mgrMatches(s.authMgrQuery).length > 0,
+      authMgrPicked: !!s.authMgrClubId,
+      authMgrUnlisted: !s.authMgrClubId && !!String(s.authMgrQuery || '').trim()
+        && !this.mgrResolveClub(s.authMgrQuery, '').clubId,
+
+      // The "your request will be processed soon" popup after sign-up.
+      showMgrWelcome: !!s.mgrWelcome,
+      mgrWelcomeClub: s.mgrWelcome ? s.mgrWelcome.club : '',
+      closeMgrWelcome: (e) => { if (e) e.stopPropagation(); this.setState({ mgrWelcome: null }); },
+
+      // Signed-in: ask for access to a club from an existing account.
+      canRequestMgr: !!s.user && s.user.role !== 'admin',
+      showMgrReq: s.showMgrReq,
+      mgrReqFormOpen: !s.mgrReqSent,
+      mgrReqSent: s.mgrReqSent,
+      openMgrReq: (e) => {
+        if (e) e.stopPropagation();
+        this.setState({ showMgrReq: true, mgrReqSent: false, mgrReqError: '' });
+        this.loadManagerQueue();
+      },
+      closeMgrReq: (e) => { if (e) e.stopPropagation(); this.setState({ showMgrReq: false, mgrReqSent: false, mgrReqError: '' }); },
+      mgrReqQuery: s.mgrReqQuery,
+      onMgrReqQuery: (e) => this.setState({ mgrReqQuery: e.target.value, mgrReqClubId: '', mgrReqError: '' }),
+      mgrReqMessage: s.mgrReqMessage,
+      onMgrReqMessage: (e) => this.setState({ mgrReqMessage: e.target.value }),
+      mgrReqMatches: (s.mgrReqClubId ? [] : this.mgrMatches(s.mgrReqQuery)).map(c => ({
+        name: c.name, cat: c.category || '',
+        pick: () => this.setState({ mgrReqQuery: c.name, mgrReqClubId: c.id })
+      })),
+      hasMgrReqMatches: !s.mgrReqClubId && this.mgrMatches(s.mgrReqQuery).length > 0,
+      mgrReqPicked: !!s.mgrReqClubId,
+      mgrReqUnlisted: !s.mgrReqClubId && !!String(s.mgrReqQuery || '').trim()
+        && !this.mgrResolveClub(s.mgrReqQuery, '').clubId,
+      mgrReqError: s.mgrReqError,
+      hasMgrReqError: !!s.mgrReqError,
+      mgrReqSubmitLabel: s.mgrReqBusy ? 'Sending…' : 'Send request',
+      submitMgrReq: () => this.submitManagerRequest(),
+      // This person's own requests, newest first, so a pending one is visible
+      // (and cancellable) rather than a mystery after the form closes.
+      mgrMine: (s.mgrQueue || []).filter(r => s.user && r.user_id === s.user.id).map(r => ({
+        club: r.club_name || r.club_id || 'Club',
+        status: r.status === 'approved' ? 'Approved' : r.status === 'denied' ? 'Declined' : 'Pending review',
+        statusBg: r.status === 'approved' ? '#e3f2e6' : r.status === 'denied' ? '#fbe6e6' : '#fdf2d8',
+        statusFg: r.status === 'approved' ? '#1f6b34' : r.status === 'denied' ? '#9b2c2c' : '#8a6414',
+        when: tmDate(r.created_at),
+        detail: r.status === 'approved' ? 'You are ' + (r.granted_role === 'advisor' ? 'an advisor' : 'an officer') + ' of this club.'
+          : (r.status === 'denied' ? (r.review_note || 'Not approved this time.') : 'Waiting for an admin or the club advisor.'),
+        canCancel: r.status === 'pending',
+        cancel: () => this.cancelManagerRequest(r.id)
+      })),
+      hasMgrMine: (s.mgrQueue || []).some(r => s.user && r.user_id === s.user.id),
+
+      // Review queue: admins, and advisors for their own club.
+      canReviewMgr: !!s.user && (s.user.role === 'admin' || (s.user.advisorClubs || []).length > 0),
+      mgrPendingCount: String(this.mgrToReview().length),
+      hasMgrPending: this.mgrToReview().length > 0,
+      showMgrQueue: s.showMgrQueue,
+      openMgrQueue: (e) => {
+        if (e) e.stopPropagation();
+        this.setState({ showMgrQueue: true, mgrQueueError: '' });
+        this.loadManagerQueue();
+      },
+      closeMgrQueue: (e) => { if (e) e.stopPropagation(); this.setState({ showMgrQueue: false, mgrQueueError: '' }); },
+      mgrQueueError: s.mgrQueueError,
+      hasMgrQueueError: !!s.mgrQueueError,
+      mgrQueueEmpty: this.mgrToReview().length === 0,
+      mgrReview: this.mgrToReview().map(r => {
+        const clubOptions = [{ id: '', name: 'Choose the club\u2026' }].concat(
+          (s.clubs || []).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)))
+            .map(c => ({ id: c.id, name: c.name })));
+        const role = s.mgrDecideRole[r.id] || 'officer';
+        const unlisted = !r.club_id;
+        const busy = s.mgrDecideBusy === r.id;
+        return {
+          who: r.requester || 'Someone', email: r.requester_email || '',
+          clubOptions: clubOptions,
+          club: r.club_name || r.club_id,
+          unlisted: unlisted, listed: !unlisted,
+          message: r.message || '', hasMessage: !!r.message,
+          when: tmDate(r.created_at),
+          via: r.source === 'signup' ? 'at sign-up' : 'from their account',
+          officerStyle: this.mgrChipStyle(role === 'officer'),
+          advisorStyle: this.mgrChipStyle(role === 'advisor'),
+          pickOfficer: () => this.setState(st => ({ mgrDecideRole: Object.assign({}, st.mgrDecideRole, { [r.id]: 'officer' }) })),
+          pickAdvisor: () => this.setState(st => ({ mgrDecideRole: Object.assign({}, st.mgrDecideRole, { [r.id]: 'advisor' }) })),
+          linkValue: s.mgrDecideLink[r.id] || '',
+          onLink: (e) => { const v = e.target.value; this.setState(st => ({ mgrDecideLink: Object.assign({}, st.mgrDecideLink, { [r.id]: v }) })); },
+          note: s.mgrDecideNote[r.id] || '',
+          onNote: (e) => { const v = e.target.value; this.setState(st => ({ mgrDecideNote: Object.assign({}, st.mgrDecideNote, { [r.id]: v }) })); },
+          approveLabel: busy ? 'Saving…' : 'Approve as ' + (role === 'advisor' ? 'advisor' : 'officer'),
+          approve: () => this.decideManagerRequest(r, true),
+          decline: () => this.decideManagerRequest(r, false)
+        };
+      }),
+      mgrRecent: (s.mgrQueue || []).filter(r => r.status !== 'pending' && s.user && r.user_id !== s.user.id).slice(0, 6).map(r => ({
+        line: (r.requester || 'Someone') + ' · ' + (r.club_name || r.club_id) + ' · '
+          + (r.status === 'approved' ? 'approved as ' + (r.granted_role || 'officer') : 'declined') + ' ' + tmDate(r.decided_at)
+      })),
+      hasMgrRecent: (s.mgrQueue || []).some(r => r.status !== 'pending' && s.user && r.user_id !== s.user.id),
+
       showClubForm: s.showClubForm,
       clubFormOpen: !s.clubSent,
       clubSent: s.clubSent,

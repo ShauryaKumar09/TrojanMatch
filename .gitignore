@@ -18,3 +18,4 @@ supabase/insert-student-led-groups.sql
 # Raw form exports, xlsx flavour: same student names, emails, phone numbers.
 *.xlsx
 uploads/*.xlsx
+cm2a
