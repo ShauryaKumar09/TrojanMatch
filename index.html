@@ -1847,6 +1847,14 @@
              look broken, because until the project's Site URL is changed it
              does, and a student who sees an error there concludes the whole
              site does not work. -->
+        <sc-if value="{{ authConfirmOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;">
+            <h1 class="m-login-h1" style="margin:0 0 8px;font-family:'Archivo',sans-serif;font-weight:800;font-size:27px;letter-spacing:-0.02em;color:#1a2330;">One last step</h1>
+            <p style="margin:0 0 22px;font-size:15.5px;line-height:1.55;color:#5a6570;">Confirm your email to finish creating your account.</p>
+            <button onClick="{{ confirmEmail }}" style="width:100%;font-family:'Archivo',sans-serif;font-weight:700;font-size:15.5px;padding:14px;border-radius:13px;border:none;background:#00457c;color:#fff;cursor:pointer;" style-hover="background:#00335c;">{{ authConfirmLabel }}</button>
+          </div>
+        </sc-if>
+
         <sc-if value="{{ authPendingOpen }}" hint-placeholder-val="{{ false }}">
           <div style="text-align:center;">
             <div style="width:58px;height:58px;margin:0 auto 18px;border-radius:50%;background:#e8f1fa;display:flex;align-items:center;justify-content:center;">
@@ -7361,6 +7369,33 @@ const TMAuth = {
     return { type: p.get('type') || 'signup' };
   },
 
+  // The confirmation email links to this site with a token hash instead of
+  // straight to GoTrue's /verify endpoint. Mail scanners (school and Gmail
+  // link protection) open every link in a message, and /verify burns its
+  // one-time token on that first GET -- so the student's own click arrived to
+  // "otp_expired". A page load costs nothing; the token is only spent when the
+  // student presses the button, which calls confirmWithHash().
+  confirmHashFromUrl() {
+    let q;
+    try { q = new URLSearchParams(String(location.search || '')); } catch (e) { return ''; }
+    const hash = q.get('confirm_token_hash');
+    if (!hash) return '';
+    q.delete('confirm_token_hash');
+    q.delete('type');
+    const rest = q.toString();
+    try {
+      history.replaceState(null, '', location.pathname + (rest ? '?' + rest : ''));
+    } catch (e) { /* the hash stays in the address bar; harmless */ }
+    return hash;
+  },
+
+  async confirmWithHash(tokenHash) {
+    const body = await this.authFetch('/auth/v1/verify', {
+      body: { type: 'signup', token_hash: tokenHash }
+    });
+    return this.stamp(body);
+  },
+
   async signIn(email, password) {
     const body = await this.authFetch('/auth/v1/token?grant_type=password', {
       body: { email: email, password: password }
@@ -7598,7 +7633,7 @@ class Component extends DCLogic {
   // eligible. The pick is deterministic per calendar day, so everyone sees the
   // same club all day and it rotates on its own. See spotlight computation in
   // renderVals().
-  state = { dash: DASH_INIT, user: null, savedClubs: [], authMode: 'login', authBusy: false, authName: '', authEmail: '', authPassword: '', authError: '', authNotice: '', authShowPw: false, authPending: '', authResendBusy: false, authResendState: '', spotIdx: 0, clubs: [], loaded: false, view: null, search: '', category: 'All', typeFilter: 'all', showTypeFilter: false, selected: [], selectedCareers: [], styleAnswers: {}, custom: '', submitted: false, activeClubId: null, scrollY: 0, llmResults: null, llmOrder: null, llmPending: false, quizStep: 1, stepLoading: false, showAllResults: false, showStudentLedInfo: false, showOfficialClubInfo: false, showCurricularInfo: false, showBugForm: false, bugText: '', bugEmail: '', bugFile: null, bugSending: false, bugSent: false, bugError: '',
+  state = { dash: DASH_INIT, user: null, savedClubs: [], authMode: 'login', authBusy: false, authName: '', authEmail: '', authPassword: '', authError: '', authNotice: '', authShowPw: false, authPending: '', authConfirmHash: '', authConfirmBusy: false, authResendBusy: false, authResendState: '', spotIdx: 0, clubs: [], loaded: false, view: null, search: '', category: 'All', typeFilter: 'all', showTypeFilter: false, selected: [], selectedCareers: [], styleAnswers: {}, custom: '', submitted: false, activeClubId: null, scrollY: 0, llmResults: null, llmOrder: null, llmPending: false, quizStep: 1, stepLoading: false, showAllResults: false, showStudentLedInfo: false, showOfficialClubInfo: false, showCurricularInfo: false, showBugForm: false, bugText: '', bugEmail: '', bugFile: null, bugSending: false, bugSent: false, bugError: '',
     showClubForm: false, clubKind: 'new', clubName: '', clubCategory: '', clubLed: 'unsure', clubAdvisor: '',
     clubContactEmail: '', clubContactPhone: '', clubDescription: '', clubDetailedDescription: '', clubAudience: '',
     clubLocation: '', clubDays: '', clubTime: '', clubInstagram: '', clubWebsite: '', clubPhoto: null, clubNotes: '',
@@ -8027,12 +8062,17 @@ class Component extends DCLogic {
     // A confirmation link comes back with the session in the fragment. Adopt
     // it before falling back to whatever is in localStorage, so clicking the
     // link in the email signs the student in on the spot.
+    const confirmHash = TMAuth.confirmHashFromUrl();
+    if (confirmHash) {
+      this.setState({ view: 'login', authMode: 'login', authError: '', authNotice: '', authConfirmHash: confirmHash });
+      return;
+    }
     const fromLink = TMAuth.adoptFromUrl();
     if (fromLink && fromLink.error) {
       this.setState({
         view: 'login', authMode: 'login', authError: '',
-        authNotice: 'That confirmation link has already been used or has expired. '
-          + 'If you already confirmed, just log in below — otherwise enter your email and we will send a new link.'
+        authNotice: 'Your account was created, but that confirmation link has already been used or has expired. '
+          + 'If you already confirmed, just log in below — otherwise sign up again with the same email and we will send a new link.'
       });
       return;
     }
@@ -9626,7 +9666,30 @@ class Component extends DCLogic {
       // The "check your inbox" panel replaces the form entirely. Leaving the
       // form up next to it was what made the old flow read as a failure.
       authPendingOpen: !!s.authPending,
-      authFormOpen: !s.authPending,
+      authFormOpen: !s.authPending && !s.authConfirmHash,
+      authConfirmOpen: !!s.authConfirmHash,
+      authConfirmLabel: s.authConfirmBusy ? 'Confirming…' : 'Confirm my email',
+      confirmEmail: async () => {
+        const st = this.state;
+        if (!st.authConfirmHash || st.authConfirmBusy) return;
+        this.setState({ authConfirmBusy: true, authError: '' });
+        try {
+          const body = await TMAuth.confirmWithHash(st.authConfirmHash);
+          const account = body && body.access_token ? await TMAuth.account() : null;
+          if (!account) throw new Error('No session');
+          this.setState({ user: account, authPending: '', authConfirmHash: '', authConfirmBusy: false }, () => {
+            this.loadSavedClubs();
+            this.loadManagerQueue();
+            this.enterDash(account);
+          });
+        } catch (err) {
+          this.setState({
+            authConfirmHash: '', authConfirmBusy: false, authError: '',
+            authNotice: 'Your account was created, but that confirmation link has already been used or has expired. '
+              + 'If you already confirmed, just log in below.'
+          });
+        }
+      },
       authPendingEmail: s.authPending,
       authResendLabel: s.authResendBusy ? 'Sending…'
         : s.authResendState === 'sent' ? 'Sent — check your inbox'
