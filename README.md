@@ -26,7 +26,7 @@ TrojanMatch is a single-page web app that helps Wayzata students find a club wor
 
 Students can also report a bug or submit a new/updated club from the footer; both post to a Google Sheet.
 
-Made by Shaurya Kumar and Nayan Menon.
+Made by Shaurya Kumar, Nayan Menon, and Aadi Sood.
 
 ## Quick start
 
